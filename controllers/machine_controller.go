@@ -47,6 +47,7 @@ type MachineReconciler struct {
 func (r *MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	rand.Seed(time.Now().UnixNano())
 	sleep := func(t int) { time.Sleep(time.Duration(rand.Intn(t)) * time.Millisecond) }
+
 	var machine tiltv1.Machine
 	ctx := context.Background()
 	log := r.Log.WithValues("machine", req.NamespacedName)
@@ -57,8 +58,7 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return ctrl.Result{}, err
 	}
-	// fmt.Printf("status: %+v\n", machine.Status.Status)
-	//SetMessage(machine.Status.Status)
+
 	if machine.Status.Status == "" {
 		machine.Status.Status = "HOWDY"
 		err := r.Status().Update(ctx, &machine)
@@ -80,6 +80,7 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		return ctrl.Result{}, nil
 	}
+
 	mtype := machine.Spec.MachineType
 	switch mtype {
 	case "useless":
