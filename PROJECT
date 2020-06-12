@@ -1,0 +1,7 @@
+domain: op.tilt.dev
+repo: op
+resources:
+- group: tilt
+  kind: Machine
+  version: v1
+version: "2"

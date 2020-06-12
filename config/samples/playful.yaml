@@ -1,0 +1,6 @@
+apiVersion: tilt.op.tilt.dev/v1
+kind: Machine
+metadata:
+  name: machine-playful
+spec:
+  machinetype: "playful"
