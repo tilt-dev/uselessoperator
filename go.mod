@@ -1,4 +1,4 @@
-module op
+module june18
 
 go 1.13
 

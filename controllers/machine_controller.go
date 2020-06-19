@@ -24,14 +24,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	tiltv1 "op/api/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	tiltv1 "june18/api/v1"
 )
 
 // MachineReconciler reconciles a Machine object
@@ -45,68 +44,48 @@ type MachineReconciler struct {
 // +kubebuilder:rbac:groups=tilt.op.tilt.dev,resources=machines/status,verbs=get;update;patch
 
 func (r *MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	rand.Seed(time.Now().UnixNano())
-	sleep := func(t int) { time.Sleep(time.Duration(rand.Intn(t)) * time.Millisecond) }
-
-	var machine tiltv1.Machine
 	ctx := context.Background()
 	log := r.Log.WithValues("machine", req.NamespacedName)
+
+	var machine tiltv1.Machine
 	if err := r.Get(ctx, req.NamespacedName, &machine); err != nil {
-		if errors.IsNotFound(err) {
-			log.Info("object not found", "name", req.NamespacedName)
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
+		log.Info("couldn't get object", "name", req.NamespacedName)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if machine.Status.Status == "" {
 		machine.Status.Status = "HOWDY"
-		err := r.Status().Update(ctx, &machine)
-		if err != nil {
-			log.Error(err, "cant update status")
-			return ctrl.Result{}, err
+		if err := r.Status().Update(ctx, &machine); err != nil {
+			log.Info("couldn't update status", "name", req.NamespacedName)
+			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
-		log.Info("howdy", "name", req.NamespacedName)
-		return ctrl.Result{}, nil
 	}
+
 	if machine.Status.Status == "OK" {
 		return ctrl.Result{}, nil
 	}
 
 	if machine.Status.Status == "DELETE" {
-		sleep(5000)
 		if err := r.Delete(ctx, &machine); err != nil {
-			log.Error(err, "error deleting")
+			log.Info("couldn't delete machine", "name", req.NamespacedName)
+			return ctrl.Result{}, client.IgnoreNotFound(err)
 		}
+		log.Info("useless machine deleted!!!!!!!!!!!!!", "name", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
 	mtype := machine.Spec.MachineType
 	switch mtype {
-	case "useless":
-		machine.Status.Status = "DELETE"
-		log.Info("marked for deletion", "name", req.NamespacedName)
 	case "useful":
 		machine.Status.Status = "OK"
-		temp := fmt.Sprint("machine allowed:", mtype)
-		log.Info(temp)
+	case "useless":
+		machine.Status.Status = "DELETE"
 	case "playful":
-
-		var web tiltv1.Web
-		if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: req.Name + "-web"}, &web); err != nil {
-			if errors.IsNotFound(err) {
-				log.Info("object not found, creating", "name", req.NamespacedName)
-				if err := r.Create(ctx, r.newWeb(machine)); err != nil {
-					log.Error(err, "cant create web")
-					return ctrl.Result{}, err
-				}
-				return ctrl.Result{}, nil
-			} else {
-				log.Error(err, "get issue")
-				return ctrl.Result{}, err
-			}
+		opres, err := ctrl.CreateOrUpdate(ctx, r, newWeb(machine), func() error { return nil })
+		if err != nil {
+			log.Error(err, "error creating web")
 		}
-
+		log.Info(fmt.Sprint("CreateOrUpdate says:", opres), "name", req.NamespacedName)
 		r := "o"
 		s := `\`
 		if len(machine.Status.Status) > 10 {
@@ -121,15 +100,25 @@ func (r *MachineReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			machine.Status.Status = "DELETE"
 			break
 		}
-		sleep(500)
+		time.Sleep(time.Millisecond * 500)
 		machine.Status.Status = fill(plusminus(len(machine.Status.Status)), r)
 		machine.Status.Status = machine.Status.Status + fill(10-len(machine.Status.Status), " ") + s
 	}
 	if err := r.Status().Update(ctx, &machine); err != nil {
-		log.Error(err, "cant update status")
-		return ctrl.Result{}, err
+		log.Info("couldn't update status", "name", req.NamespacedName)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
+	log.Info("hello from machine ctrl", "name", req.NamespacedName)
+	// your logic here
+
 	return ctrl.Result{}, nil
+}
+
+func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&tiltv1.Machine{}).
+		Complete(r)
 }
 
 func fill(n int, c string) string {
@@ -155,7 +144,7 @@ func plusminus(count int) int {
 	return n
 }
 
-func (r *MachineReconciler) newWeb(machine tiltv1.Machine) *tiltv1.Web {
+func newWeb(machine tiltv1.Machine) *tiltv1.Web {
 	return &tiltv1.Web{
 		TypeMeta: metav1.TypeMeta{Kind: "Web"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -164,11 +153,4 @@ func (r *MachineReconciler) newWeb(machine tiltv1.Machine) *tiltv1.Web {
 		},
 		Spec: tiltv1.WebSpec{},
 	}
-}
-
-func (r *MachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&tiltv1.Machine{}).
-		Owns(&tiltv1.Web{}).
-		Complete(r)
 }

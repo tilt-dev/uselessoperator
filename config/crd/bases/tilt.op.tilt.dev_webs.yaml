@@ -9,12 +9,10 @@ metadata:
   name: webs.tilt.op.tilt.dev
 spec:
   additionalPrinterColumns:
-  - JSONPath: .spec.machinetype
-    format: byte
-    name: type
+  - JSONPath: .spec.webtype
+    name: webtype
     type: string
   - JSONPath: .status.status
-    format: byte
     name: status
     type: string
   group: tilt.op.tilt.dev
@@ -28,7 +26,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: Web is the Schema for the machines API
+      description: Web is the Schema for the webs API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -45,16 +43,17 @@ spec:
         spec:
           description: WebSpec defines the desired state of Web
           properties:
-            machine:
+            webtype:
+              description: Foo is an example field of Web. Edit Web_types.go to remove/update
               type: string
-          required:
-          - machine
           type: object
         status:
           description: WebStatus defines the observed state of Web
           properties:
             status:
-              description: The type of machine.
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
               type: string
           type: object
       type: object

@@ -1,5 +1,5 @@
 domain: op.tilt.dev
-repo: op
+repo: june18
 resources:
 - group: tilt
   kind: Machine

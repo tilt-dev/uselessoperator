@@ -1,6 +1,7 @@
 apiVersion: tilt.op.tilt.dev/v1
 kind: Web
 metadata:
-  name: webtest
+  name: web-test
 spec:
-  machine: "test"
+  # Add fields here
+  webtype: "fun!"

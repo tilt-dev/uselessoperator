@@ -18,8 +18,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"net/http"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,8 +26,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	tiltv1 "op/api/v1"
-	"op/controllers"
+	tiltv1 "june18/api/v1"
+	"june18/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -46,10 +44,6 @@ func init() {
 }
 
 func main() {
-
-	http.HandleFunc("/", web)
-	go http.ListenAndServe(":8090", nil)
-
 	var metricsAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
@@ -65,7 +59,7 @@ func main() {
 		MetricsBindAddress: metricsAddr,
 		Port:               9443,
 		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "5f342caa.op.tilt.dev",
+		LeaderElectionID:   "9560324c.op.tilt.dev",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -95,9 +89,4 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func web(w http.ResponseWriter, req *http.Request) {
-	message := controllers.GetMessage()
-	fmt.Fprintf(w, "%s\n", message)
 }

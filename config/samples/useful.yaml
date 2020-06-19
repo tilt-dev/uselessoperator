@@ -3,4 +3,5 @@ kind: Machine
 metadata:
   name: machine-useful
 spec:
+  # Add fields here
   machinetype: "useful"

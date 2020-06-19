@@ -21,13 +21,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	tiltv1 "op/api/v1"
+	tiltv1 "june18/api/v1"
 )
 
 // WebReconciler reconciles a Web object
@@ -37,39 +38,17 @@ type WebReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-var message string
-
-// SetMessage sets the message
-func SetMessage(s string) {
-	message = s
-}
-
-// GetMessage returns the message
-func GetMessage() string {
-	return message
-}
-
 // +kubebuilder:rbac:groups=tilt.op.tilt.dev,resources=webs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=tilt.op.tilt.dev,resources=webs/status,verbs=get;update;patch
 
 func (r *WebReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	return ctrl.Result{}, nil
-}
+	_ = context.Background()
+	log := r.Log.WithValues("web", req.NamespacedName)
 
-// https://twitter.com/ellenkorbes/status/1271248596055269376
-func (r *WebReconciler) machineUpdate(obj handler.MapObject) []ctrl.Request {
-	namespaced := types.NamespacedName{Namespace: obj.Meta.GetNamespace(), Name: obj.Meta.GetName()}
-	ctx := context.Background()
-	log := r.Log.WithValues("web", namespaced)
-	var machine tiltv1.Machine
-	if err := r.Get(ctx, namespaced, &machine); err != nil {
-		log.Info("cant get machine", "name", namespaced)
-		return []ctrl.Request{}
-	}
-	if machine.Spec.MachineType == "playful" {
-		SetMessage(machine.Status.Status)
-	}
-	return []ctrl.Request{}
+	log.Info("hello from web ctrl", "name", req.NamespacedName)
+	// your logic here
+
+	return ctrl.Result{}, nil
 }
 
 func (r *WebReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -78,7 +57,18 @@ func (r *WebReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&source.Kind{Type: &tiltv1.Machine{}},
 			&handler.EnqueueRequestsFromMapFunc{
-				ToRequests: handler.ToRequestsFunc(r.machineUpdate),
-			}).
+				ToRequests: handler.ToRequestsFunc(
+					func(obj handler.MapObject) []ctrl.Request {
+						return []ctrl.Request{
+							{
+								NamespacedName: types.NamespacedName{
+									Name:      obj.Meta.GetName(),
+									Namespace: obj.Meta.GetNamespace(),
+								},
+							},
+						}
+					},
+				)},
+		).
 		Complete(r)
 }
